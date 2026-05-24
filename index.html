@@ -4,111 +4,462 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Red Car Trolley — live ETA</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Spectral:ital,wght@0,400;0,500;0,700;1,400&family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
 <style>
-  :root { color-scheme: dark; }
-  * { box-sizing: border-box; }
-  body { margin:0; font-family: system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-         background:#0d0f14; color:#e8eaed; min-height:100vh; padding:26px 14px;
-         display:flex; flex-direction:column; align-items:center; gap:16px; }
-  h1 { font-size:21px; margin:0; color:#e23b2e; letter-spacing:.5px; }
-  .sub { color:#8a93a3; font-size:12px; margin:0; text-align:center; }
-  #calib { font-size:12px; padding:6px 12px; border-radius:8px; }
-  #calib.bad { background:#3a1d1d; color:#ff9a8a; }
-  #calib.ok { background:#173026; color:#7fe0a8; }
-  .row { display:flex; gap:16px; flex-wrap:wrap; justify-content:center; width:100%; max-width:660px; }
-  .card { flex:1 1 250px; background:#161a22; border:1px solid #232a36; border-radius:12px; padding:16px 18px; }
-  .card h2 { margin:0 0 6px; font-size:15px; color:#cdd3dd; }
-  .eta { font-size:34px; font-weight:700; font-variant-numeric:tabular-nums; }
-  .here { color:#55ff77; } .soon { color:#ffd27a; }
-  .note { font-size:12px; color:#8a93a3; margin-top:5px; }
-  .name { font-size:12px; color:#8a93a3; }
-  .state { font-size:18px; font-weight:600; margin:2px 0; }
-  .track { width:100%; max-width:660px; }
-  .bar { position:relative; height:8px; background:#232a36; border-radius:4px; margin:32px 0 8px; }
-  .endlabel { position:absolute; top:-23px; font-size:12px; color:#9aa3b2; }
-  .dot { position:absolute; top:-6px; width:18px; height:18px; border-radius:50%;
-         transform:translateX(-50%); transition:left .25s linear;
-         display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#0d0f14; }
-  .footer { width:100%; max-width:660px; font-size:12px; color:#7b8494; line-height:1.6; }
-  .footer input { width:92px; background:#0d0f14; color:#e8eaed; border:1px solid #2a3340;
-                  border-radius:6px; padding:3px 6px; font-variant-numeric:tabular-nums; }
-  .footer button { background:#232a36; color:#e8eaed; border:1px solid #2a3340; border-radius:6px;
-                   padding:5px 10px; cursor:pointer; font-size:13px; margin-right:4px; }
-  #anchor { border-color:#3a5; color:#bdf5cf; }
-  #calStats { color:#cdd3dd; font-size:12px; margin:8px 0 0; }
-  #calStats b { color:#e8eaed; font-variant-numeric:tabular-nums; }
-  .footer details { margin-top:8px; }
-  .footer summary { cursor:pointer; color:#9aa3b2; }
+  /* styles ported from the Claude Design redesign; theme values are CSS custom
+     properties set on #root by the THEMES table in the script. */
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; min-height: 100%; }
+  body { background: #111; }
+
+  .rct-root {
+    --content-w: 1100px;
+    position: relative;
+    min-height: 100vh;
+    font-family: var(--font-body);
+    color: var(--fg);
+    background: var(--bg);
+    overflow-x: hidden;
+  }
+  .rct-bg {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background: var(--texture);
+    background-color: var(--bg);
+  }
+  .rct-vignette {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background: var(--vignette);
+  }
+  .rct-stage {
+    position: relative; z-index: 1;
+    max-width: var(--content-w);
+    margin: 0 auto;
+    padding: 48px 32px 64px;
+    display: flex; flex-direction: column; gap: 36px;
+  }
+
+  /* ── Header ─────────────────────────────────────────────────────────────── */
+  .rct-hd {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 24px;
+  }
+  .rct-hd-mark { display: flex; align-items: center; gap: 12px; }
+  .rct-hd-glyph { font-size: 28px; color: var(--accent); line-height: 1; }
+  .rct-hd-line { display: none; }
+  .rct-hd-title {
+    margin: 0;
+    font-family: var(--font-disp);
+    font-weight: 500;
+    font-size: clamp(28px, 4vw, 44px);
+    letter-spacing: -0.01em;
+    line-height: 1;
+  }
+  .rct-hd-sub { margin: 6px 0 0; color: var(--muted); font-size: 14px; letter-spacing: 0.01em; }
+  .rct-hd-meta {
+    display: flex; flex-direction: column; align-items: flex-end; gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em;
+  }
+  .rct-hd-status {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px;
+    color: var(--muted);
+  }
+  .rct-hd-status.on { color: var(--fg); border-color: var(--fg); }
+  .rct-hd-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+  .rct-hd-status.on .rct-hd-dot {
+    background: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 25%, transparent);
+    animation: rct-pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes rct-pulse {
+    0%, 100% { box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 28%, transparent); }
+    50%      { box-shadow: 0 0 0 6px color-mix(in oklab, var(--accent) 0%,  transparent); }
+  }
+  .rct-hd-toggle {
+    appearance: none; border: 0; background: transparent;
+    display: inline-flex; align-items: center; gap: 10px; padding: 0;
+    font: inherit; color: var(--muted); cursor: pointer;
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+  }
+  .rct-hd-toggle:hover { color: var(--fg); }
+  .hd-toggle-track {
+    position: relative; display: inline-flex; align-items: center;
+    width: 52px; height: 26px; border-radius: 999px;
+    background: var(--ring-bg); border: 1px solid var(--card-bd);
+    transition: background .25s ease;
+  }
+  .hd-toggle-thumb {
+    position: absolute; top: 2px; width: 20px; height: 20px; border-radius: 50%;
+    background: var(--bg); color: var(--accent);
+    display: inline-flex; align-items: center; justify-content: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,.18);
+    transition: left .25s cubic-bezier(.3,.7,.4,1), color .25s ease;
+  }
+  .hd-toggle-light .hd-toggle-thumb { left: 3px; }
+  .hd-toggle-dark  .hd-toggle-thumb { left: 28px; }
+  .hd-toggle-lbl { font-variant-numeric: tabular-nums; width: 4.5em; text-align: left; }
+
+  /* ── Schematic track ────────────────────────────────────────────────────── */
+  .track {
+    position: relative; padding: 56px 8px 24px;
+    background: var(--card); border: 1px solid var(--card-bd);
+    border-radius: var(--rad); box-shadow: var(--shadow); overflow: hidden;
+  }
+  .track::before {
+    content: 'TRACK · SCHEMATIC';
+    position: absolute; top: 14px; left: 18px;
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.18em; color: var(--muted);
+  }
+  .track::after {
+    content: '↔ ~5 min';
+    position: absolute; top: 14px; right: 18px;
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; color: var(--muted);
+  }
+  .track-frame { position: relative; height: 130px; margin: 0 6%; }
+  .rail {
+    position: absolute; left: 0; right: 0; top: 50%; height: 4px; transform: translateY(-50%);
+    background: linear-gradient(to right, transparent 0%, var(--fg) 6%, var(--fg) 94%, transparent 100%);
+    opacity: .55; border-radius: 2px;
+  }
+  .ties { position: absolute; left: 0; right: 0; top: 50%; width: 100%; height: 40px; transform: translateY(-50%); color: var(--fg); }
+  .station {
+    position: absolute; top: 50%; width: 0;
+    display: flex; flex-direction: column; align-items: center;
+    text-align: center; white-space: nowrap;
+  }
+  .station-left  { left: 10%; transform: translate(-50%, -50%); }
+  .station-right { left: 90%; transform: translate(-50%, -50%); }
+  .station-marker {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--bg); border: 3px solid var(--fg);
+    box-shadow: 0 0 0 5px var(--bg); position: relative;
+  }
+  .station-marker::after { content: ''; position: absolute; inset: 4px; border-radius: 50%; background: var(--accent); }
+  .station-label { position: absolute; top: -40px; font-family: var(--font-disp); font-size: 18px; font-weight: 500; }
+  .station-sub {
+    position: absolute; top: 36px; font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase;
+  }
+  .car {
+    position: absolute; top: 50%; width: 72px; height: 36px;
+    transform: translate(-50%, -50%); transition: left .15s linear;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,.18)); pointer-events: none;
+  }
+  .car-svg { display: block; overflow: visible; }
+
+  /* ── Car cards ──────────────────────────────────────────────────────────── */
+  .stations { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .car-card {
+    position: relative; padding: 22px 24px 20px;
+    background: var(--card); border: 1px solid var(--card-bd);
+    border-radius: var(--rad); box-shadow: var(--shadow);
+    display: flex; flex-direction: column; gap: 18px;
+  }
+  .car-card::before {
+    content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px;
+    border-radius: var(--rad) var(--rad) 0 0;
+  }
+  .car-card-good::before { background: var(--good); }
+  .car-card-bad::before  { background: var(--bad);  }
+  .car-card-hd { display: flex; flex-direction: column; gap: 4px; }
+  .car-card-tag {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: 0.18em;
+  }
+  .car-card-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .car-card-name { font-family: var(--font-disp); font-size: 22px; font-weight: 500; letter-spacing: -0.01em; color: var(--muted); }
+  .car-card-rows { display: flex; flex-direction: column; }
+  .arr-row {
+    display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 16px;
+    padding: 14px 0; border-top: 1px solid var(--card-bd);
+  }
+  .arr-row:first-child { border-top: 0; padding-top: 4px; }
+  .arr-row-l { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .arr-row-lbl { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
+  .arr-row-at { font-family: var(--font-disp); font-size: 17px; font-weight: 500; line-height: 1.2; text-wrap: balance; }
+  .arr-row-time { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 22px; font-weight: 600; letter-spacing: 0.01em; line-height: 1; }
+  .arr-row-primary .arr-row-time { font-size: 38px; font-weight: 700; }
+  .arr-row-primary .arr-row-at { font-size: 20px; }
+
+  /* ── Calibration ────────────────────────────────────────────────────────── */
+  .calibrate {
+    display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 18px;
+    padding: 18px 20px; background: var(--card); border: 1px solid var(--card-bd); border-radius: var(--rad);
+  }
+  .cal-fire {
+    appearance: none; border: 0; grid-column: 1;
+    display: flex; align-items: center; gap: 14px; padding: 14px 18px;
+    background: var(--fg); color: var(--bg); border-radius: calc(var(--rad) - 2px);
+    cursor: pointer; font: inherit; text-align: left;
+    transition: transform .1s ease, box-shadow .1s ease;
+  }
+  .cal-fire:hover { transform: translateY(-1px); box-shadow: 0 8px 18px -10px rgba(0,0,0,.35); }
+  .cal-fire:active { transform: translateY(0); }
+  .cal-fire-dot {
+    width: 12px; height: 12px; border-radius: 50%; background: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 35%, transparent);
+  }
+  .cal-fire-lbl { display: flex; flex-direction: column; line-height: 1.15; }
+  .cal-fire-verb { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; opacity: .65; }
+  .cal-fire-action { font-size: 15px; font-weight: 500; margin-top: 2px; }
+  .cal-fire-action em { color: var(--accent); font-style: normal; font-weight: 700; }
+  .cal-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; font-size: 12px; grid-column: 2; white-space: nowrap; }
+  .cal-row { display: flex; gap: 10px; }
+  .cal-key { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
+  .cal-val { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .cal-actions { display: flex; gap: 12px; }
+  .cal-link {
+    appearance: none; border: 0; background: transparent; font: inherit; color: var(--muted);
+    font-size: 11px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 0;
+  }
+  .cal-link:hover { color: var(--fg); }
+  .cal-link-warn:hover { color: var(--accent); }
+
+  /* status banner + stats + advanced — extensions for our calibration engine */
+  .cal-banner {
+    grid-column: 1 / -1; font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .02em;
+    padding: 9px 12px; border-radius: var(--rad); border: 1px solid var(--card-bd);
+  }
+  .cal-banner.ok  { color: var(--good); border-color: color-mix(in oklab, var(--good) 40%, var(--card-bd)); background: color-mix(in oklab, var(--good) 8%, transparent); }
+  .cal-banner.bad { color: var(--bad);  border-color: color-mix(in oklab, var(--bad) 40%, var(--card-bd));  background: color-mix(in oklab, var(--bad) 8%, transparent); }
+  .cal-stats { grid-column: 1 / -1; margin: 0; font-family: var(--font-mono); font-size: 11px; line-height: 1.5; color: var(--muted); }
+  .cal-stats b { color: var(--fg); font-variant-numeric: tabular-nums; }
+  .cal-advanced { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 12px; padding-top: 12px; border-top: 1px dashed var(--card-bd); }
+  .cal-adv-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .cal-adv-row label { font-family: var(--font-mono); font-size: 11px; letter-spacing: .04em; color: var(--muted); }
+  .cal-num {
+    width: 130px; appearance: none; background: var(--bg); border: 1px solid var(--card-bd);
+    border-radius: var(--rad); padding: 7px 9px; font: inherit; font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums; color: var(--fg); outline: none;
+  }
+  .cal-num:focus { border-color: var(--accent); }
+  .cal-mini {
+    appearance: none; border: 1px solid var(--card-bd); background: transparent; color: var(--fg);
+    border-radius: var(--rad); padding: 7px 12px; font: inherit; font-size: 12px; cursor: pointer; margin-left: 4px;
+  }
+  .cal-mini:hover { border-color: var(--accent); color: var(--accent); }
+  .cal-adv-help { margin: 0; font-size: 12px; line-height: 1.5; color: var(--muted); }
+  .cal-adv-help b { color: var(--fg); }
+
+  /* ── Footer ─────────────────────────────────────────────────────────────── */
+  .rct-foot { margin-top: 8px; font-size: 13px; line-height: 1.6; color: var(--muted); max-width: 720px; }
+  .rct-foot p { margin: 0 0 8px; text-wrap: pretty; }
+  .rct-foot b { color: var(--fg); font-weight: 600; }
+  .rct-foot-meta { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; color: var(--faint); }
+  .rct-foot-meta b { color: var(--fg); font-weight: 600; }
+
+  /* ── Theme-specific polish ──────────────────────────────────────────────── */
+  /* Linen: vintage timetable — heavier rules and bolder countdowns. */
+  .rct-root[data-theme="linen"] .car-card,
+  .rct-root[data-theme="linen"] .track { border-width: 2px; }
+  .rct-root[data-theme="linen"] .arr-row-time { font-weight: 800; }
+  /* Midnight: glow on the cars and station rings. */
+  .rct-root[data-theme="midnight"] .car {
+    filter: drop-shadow(0 0 14px color-mix(in oklab, var(--accent) 30%, transparent))
+            drop-shadow(0 4px 8px rgba(0,0,0,.5));
+  }
+  .rct-root[data-theme="midnight"] .station-marker {
+    box-shadow: 0 0 0 5px var(--bg), 0 0 24px color-mix(in oklab, var(--accent) 50%, transparent);
+  }
+
+  /* ── Responsive ─────────────────────────────────────────────────────────── */
+  @media (max-width: 720px) {
+    .rct-stage { padding: 28px 18px 48px; gap: 24px; }
+    .rct-hd { grid-template-columns: 1fr; gap: 12px; }
+    .rct-hd-meta { align-items: flex-start; flex-direction: row; gap: 12px; flex-wrap: wrap; }
+    .stations { grid-template-columns: 1fr; }
+    .calibrate { grid-template-columns: 1fr; }
+    .cal-fire, .cal-meta { grid-column: 1; }
+    .cal-meta { align-items: flex-start; }
+    .track-frame { margin: 0 4%; height: 110px; }
+    .arr-row-primary .arr-row-time { font-size: 32px; }
+  }
 </style>
 </head>
 <body>
-  <h1>🚃 Red Car Trolley</h1>
-  <p class="sub">live arrival predictions · DCA gate ⟷ Guardians of the Galaxy</p>
-  <div id="calib"></div>
+  <div class="rct-root" id="root">
+    <div class="rct-bg"></div>
+    <div class="rct-vignette"></div>
 
-  <div class="row">
-    <div class="card"><h2>Buena Vista</h2><div class="eta" id="bvEta">–</div><div class="note" id="bvNote"></div></div>
-    <div class="card"><h2>GotG</h2><div class="eta" id="ggEta">–</div><div class="note" id="ggNote"></div></div>
-  </div>
+    <main class="rct-stage">
+      <header class="rct-hd">
+        <div class="rct-hd-mark"><span class="rct-hd-glyph">▣</span><span class="rct-hd-line"></span></div>
+        <div class="rct-hd-titles">
+          <h1 class="rct-hd-title">Red Car Trolley</h1>
+          <p class="rct-hd-sub">live arrival predictions · DCA Front Gate ⟷ Mission: BREAKOUT!</p>
+        </div>
+        <div class="rct-hd-meta">
+          <div class="rct-hd-status off" id="hdStatus"><span class="rct-hd-dot"></span><span id="hdStatusTxt">awaiting calibration</span></div>
+          <button class="rct-hd-toggle" id="themeToggle" aria-label="Toggle light/dark theme" title="Toggle light/dark theme">
+            <span class="hd-toggle-track hd-toggle-light" id="toggleTrack"><span class="hd-toggle-thumb" id="toggleThumb"></span></span>
+            <span class="hd-toggle-lbl" id="themeLabel">Linen</span>
+          </button>
+        </div>
+      </header>
 
-  <div class="track">
-    <div class="bar">
-      <span class="endlabel" style="left:0">GotG</span>
-      <span class="endlabel" style="right:0">Buena Vista</span>
-      <div class="dot" id="dotA" style="background:#55ff77;box-shadow:0 0 9px #55ff77">G</div>
-      <div class="dot" id="dotB" style="background:#ffaa00;box-shadow:0 0 9px #ffaa00">B</div>
-    </div>
-  </div>
+      <section class="track">
+        <div class="track-frame">
+          <svg class="ties" id="ties" viewBox="0 0 1000 80" preserveAspectRatio="none"></svg>
+          <div class="rail"></div>
+          <div class="station station-left">
+            <div class="station-marker"></div>
+            <div class="station-label">Mission: BREAKOUT!</div>
+            <div class="station-sub">Guardians of the Galaxy</div>
+          </div>
+          <div class="station station-right">
+            <div class="station-marker"></div>
+            <div class="station-label">Front Gate</div>
+            <div class="station-sub">DCA Front Gate</div>
+          </div>
+          <div class="car" id="carGood">
+            <svg viewBox="0 0 72 36" width="72" height="36" class="car-svg">
+              <rect x="4" y="6" width="64" height="22" rx="3" fill="var(--good)" />
+              <rect x="8" y="3" width="56" height="4" rx="1.5" fill="var(--good)" opacity=".85" />
+              <g fill="var(--bg)" opacity=".85">
+                <rect x="9" y="10" width="9" height="9" rx="1" /><rect x="21" y="10" width="9" height="9" rx="1" />
+                <rect x="33" y="10" width="9" height="9" rx="1" /><rect x="45" y="10" width="9" height="9" rx="1" />
+                <rect x="57" y="10" width="6" height="9" rx="1" />
+              </g>
+              <rect x="4" y="22" width="64" height="2" fill="var(--bg)" opacity=".35" />
+              <circle cx="14" cy="30" r="3.5" fill="var(--fg)" opacity=".7" /><circle cx="58" cy="30" r="3.5" fill="var(--fg)" opacity=".7" />
+              <text x="36" y="17.5" text-anchor="middle" font-family="var(--font-mono)" font-size="8" font-weight="700" fill="var(--bg)" opacity=".75">G</text>
+            </svg>
+          </div>
+          <div class="car" id="carBad">
+            <svg viewBox="0 0 72 36" width="72" height="36" class="car-svg">
+              <rect x="4" y="6" width="64" height="22" rx="3" fill="var(--bad)" />
+              <rect x="8" y="3" width="56" height="4" rx="1.5" fill="var(--bad)" opacity=".85" />
+              <g fill="var(--bg)" opacity=".85">
+                <rect x="9" y="10" width="9" height="9" rx="1" /><rect x="21" y="10" width="9" height="9" rx="1" />
+                <rect x="33" y="10" width="9" height="9" rx="1" /><rect x="45" y="10" width="9" height="9" rx="1" />
+                <rect x="57" y="10" width="6" height="9" rx="1" />
+              </g>
+              <rect x="4" y="22" width="64" height="2" fill="var(--bg)" opacity=".35" />
+              <circle cx="14" cy="30" r="3.5" fill="var(--fg)" opacity=".7" /><circle cx="58" cy="30" r="3.5" fill="var(--fg)" opacity=".7" />
+              <text x="36" y="17.5" text-anchor="middle" font-family="var(--font-mono)" font-size="8" font-weight="700" fill="var(--bg)" opacity=".75">B</text>
+            </svg>
+          </div>
+        </div>
+      </section>
 
-  <div class="row">
-    <div class="card"><div class="name" style="color:#55ff77">Good car</div><div class="state" id="aState">–</div><div class="note" id="aDetail"></div></div>
-    <div class="card"><div class="name" style="color:#ffaa00">Bad car</div><div class="state" id="bState">–</div><div class="note" id="bDetail"></div></div>
-  </div>
+      <div class="stations">
+        <div class="car-card car-card-good">
+          <header class="car-card-hd">
+            <div class="car-card-tag" style="color:var(--good)"><span class="car-card-dot" style="background:var(--good)"></span>GOOD CAR</div>
+            <div class="car-card-name">The green trolley</div>
+          </header>
+          <div class="car-card-rows">
+            <div class="arr-row arr-row-primary">
+              <div class="arr-row-l"><div class="arr-row-lbl">Arriving at</div><div class="arr-row-at" id="gPrimStation">—</div></div>
+              <div class="arr-row-time" id="gPrimTime" style="color:var(--good)">––:––</div>
+            </div>
+            <div class="arr-row">
+              <div class="arr-row-l"><div class="arr-row-lbl">Then at</div><div class="arr-row-at" id="gSecStation">—</div></div>
+              <div class="arr-row-time" id="gSecTime">––:––</div>
+            </div>
+          </div>
+        </div>
 
-  <div class="footer">
-    <p><button id="anchor">▶ the Good car just left GotG</button>
-       <button id="swap" title="if Good/Bad are on the wrong cars, swap them">⇄ swap A/B</button>
-       <button id="undo" title="remove the most recent tap">↶ undo</button>
-       <button id="reset" title="clear all calibration">reset</button></p>
-    <p id="calStats"></p>
-    <p><b>Calibrate me.</b> Tap the button the instant the Good car pulls out of GotG. The first tap
-       locks the phase to real life; <b>every tap after that also sharpens the cycle period</b> — the
-       longer your taps span (an hour → ±0.1&nbsp;s, a day → ±0.02&nbsp;s), the slower it drifts. A
-       single hardcoded period can't stay accurate: it's only known to ±0.2&nbsp;s, which over many
-       cycles accumulates real drift, and a server restart resets the cycle entirely — so it has to be
-       anchored to live sightings, just like the in-game mod. The two cars run half a cycle apart and
-       are identical, so which one is “Good” can't be derived from the anchor — if the labels land on
-       the wrong cars, hit <b>⇄ swap A/B</b> once. Track is schematic; countdowns are exact.</p>
-    <details>
-      <summary>advanced — force a period or reset after a restart</summary>
-      <p>Manual period override (s):
-         <input id="cOv" type="number" step="0.01" placeholder="auto" />
-         <button id="cSave">set</button> <button id="cClear">auto</button></p>
-      <p>Anchor from a timestamp (Unix&nbsp;s):
-         <input id="anIn" type="number" step="0.1" placeholder="from /imf rct calib" />
-         <button id="anSet">add</button> — paste a GotG-departure time the mod logged.</p>
-      <p>Use <b>reset</b> after a server restart (the cycle starts over, so old taps no longer line up),
-         or <b>undo</b> to drop a mistimed tap. Taps older than 48&nbsp;h are forgotten automatically.</p>
-    </details>
+        <div class="car-card car-card-bad">
+          <header class="car-card-hd">
+            <div class="car-card-tag" style="color:var(--bad)"><span class="car-card-dot" style="background:var(--bad)"></span>BAD CAR</div>
+            <div class="car-card-name">The red trolley</div>
+          </header>
+          <div class="car-card-rows">
+            <div class="arr-row arr-row-primary">
+              <div class="arr-row-l"><div class="arr-row-lbl">Arriving at</div><div class="arr-row-at" id="bPrimStation">—</div></div>
+              <div class="arr-row-time" id="bPrimTime" style="color:var(--bad)">––:––</div>
+            </div>
+            <div class="arr-row">
+              <div class="arr-row-l"><div class="arr-row-lbl">Then at</div><div class="arr-row-at" id="bSecStation">—</div></div>
+              <div class="arr-row-time" id="bSecTime">––:––</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <section class="calibrate">
+        <button class="cal-fire" id="anchor">
+          <span class="cal-fire-dot"></span>
+          <span class="cal-fire-lbl">
+            <span class="cal-fire-verb">tap when</span>
+            <span class="cal-fire-action">the <em>Good</em> car leaves Mission: BREAKOUT!</span>
+          </span>
+        </button>
+        <div class="cal-meta">
+          <div class="cal-row"><span class="cal-key">anchor</span><span class="cal-val" id="anchorVal">not set</span></div>
+          <div class="cal-actions">
+            <button class="cal-link" id="swap" title="if Good/Bad landed on the wrong cars, swap them">swap A/B</button>
+            <button class="cal-link" id="undo" title="remove the most recent tap">undo</button>
+            <button class="cal-link cal-link-warn" id="reset" title="clear all calibration">reset</button>
+            <button class="cal-link" id="advToggle">advanced</button>
+          </div>
+        </div>
+        <div class="cal-banner bad" id="calBanner">rough estimate — not yet calibrated.</div>
+        <p class="cal-stats" id="calStats"></p>
+        <div class="cal-advanced" id="calAdvanced" hidden>
+          <div class="cal-adv-row">
+            <label>Manual period override (s)</label>
+            <span><input id="cOv" type="number" step="0.01" placeholder="auto" class="cal-num" />
+              <button class="cal-mini" id="cSave">set</button><button class="cal-mini" id="cClear">auto</button></span>
+          </div>
+          <div class="cal-adv-row">
+            <label>Anchor from a timestamp (Unix s)</label>
+            <span><input id="anIn" type="number" step="0.1" placeholder="from /imf rct calib" class="cal-num" />
+              <button class="cal-mini" id="anSet">add</button></span>
+          </div>
+          <p class="cal-adv-help">Paste a GotG-departure time the mod logged. Use <b>reset</b> after a server restart
+            (the cycle starts over, so old taps no longer line up), or <b>undo</b> to drop a mistimed tap.
+            Taps older than 48&nbsp;h are forgotten automatically.</p>
+        </div>
+      </section>
+
+      <footer class="rct-foot">
+        <p>Tap the button the instant the Good car pulls out of Mission: BREAKOUT! — the first tap locks the phase to
+          real life, and <b>every tap after that also sharpens the cycle period</b> (an hour of taps → ±0.1&nbsp;s,
+          a day → ±0.02&nbsp;s). A single hardcoded period can't stay accurate: it's known only to ±0.2&nbsp;s and a
+          server restart resets the cycle, so real accuracy always comes from live taps.</p>
+        <p>The two cars run half a cycle apart and are identical, so which one is “Good” can't be derived from timing —
+          if the labels land on the wrong cars, hit <b>swap A/B</b> once.</p>
+        <p class="rct-foot-meta">cycle <b id="footCycle">680.00 s</b> · two cars run half a cycle apart · track is schematic, countdowns are exact</p>
+      </footer>
+    </main>
   </div>
 
 <script>
+  // ════════════════════════════════════════════════════════════════════════
+  //  MODEL + CALIBRATION ENGINE — unchanged from production (the redesign's
+  //  simpler one-anchor model is intentionally NOT used; this is our algorithm).
+  // ════════════════════════════════════════════════════════════════════════
   var SEED_C = 680.0;         // even-second period: direct capture ~679.77 + observed drift ⇒ 680
   var SEED_SIGMA = 0.15;      // prior uncertainty; live taps sharpen this
   var TAP_SIGMA = 1.0;        // a human button-tap pins a phase-0 crossing to ~±1 s
   var BV_ARRIVE = 306, BV_DEPART = 316.3, GOTG_ARRIVE = 622.3; // phase landmarks; GotG dwell flexes with C
-  var EPOCH0_DEFAULT = 518.1; // rough phase offset shown before any live anchor
+  var EPOCH0_DEFAULT = 173.5; // = 1779648573.5 mod 680 (anchor baked 2026-05-25); rough phase before any live anchor
   var PRUNE_SEC = 48 * 3600;  // forget taps older than this (server restarts reset the cycle)
   var MAX_ANCHORS = 24;
+
+  // station display labels (from the redesign)
+  var GOTG_LBL = "Guardians of the Galaxy — Mission: BREAKOUT!";
+  var BV_LBL   = "Disney California Adventure Front Gate";
 
   var $ = function (id) { return document.getElementById(id); };
   function mod(a, m) { return ((a % m) + m) % m; }
   function fmt(s) { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2); }
+  function fmtMMSS(s) { s = Math.max(0, Math.round(s)); return ("0" + Math.floor(s / 60)).slice(-2) + ":" + ("0" + (s % 60)).slice(-2); }
   function fmtSpan(s) {
     s = Math.round(s);
     var h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60);
     return h > 0 ? (h + " h " + m + " m") : (m + " m");
   }
+  function fmtClock(ms) { return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' }); }
 
   // ---- calibration state ----
   var anchors = loadAnchors();      // sorted Unix-second timestamps of "Good car left GotG"
@@ -202,32 +553,56 @@
     phase = mod(phase, C);
     var toBV = mod(BV_ARRIVE - phase, C), toGG = mod(GOTG_ARRIVE - phase, C);
     var o = { phase: phase, toBV: toBV, toGG: toGG, atBV: false, atGG: false, departs: 0 };
-    if (phase < BV_ARRIVE) { o.state = "→ Buena Vista"; o.detail = "arrives in " + fmt(toBV); o.frac = phase / 306; }
-    else if (phase < BV_DEPART) { o.atBV = true; o.departs = BV_DEPART - phase; o.state = "at Buena Vista"; o.detail = "departs in " + fmt(o.departs); o.frac = 1; }
-    else if (phase < GOTG_ARRIVE) { o.state = "→ GotG"; o.detail = "arrives in " + fmt(toGG); o.frac = 1 - (phase - BV_DEPART) / 306; }
-    else { o.atGG = true; o.departs = C - phase; o.state = "at GotG"; o.detail = "departs in " + fmt(o.departs); o.frac = 0; }
+    if (phase < BV_ARRIVE) { o.state = "→ Buena Vista"; o.detail = "arrives in " + fmt(toBV); o.frac = phase / 306; o.dir = 1; }
+    else if (phase < BV_DEPART) { o.atBV = true; o.departs = BV_DEPART - phase; o.state = "at Buena Vista"; o.detail = "departs in " + fmt(o.departs); o.frac = 1; o.dir = -1; }
+    else if (phase < GOTG_ARRIVE) { o.state = "→ GotG"; o.detail = "arrives in " + fmt(toGG); o.frac = 1 - (phase - BV_DEPART) / 306; o.dir = -1; }
+    else { o.atGG = true; o.departs = C - phase; o.state = "at GotG"; o.detail = "departs in " + fmt(o.departs); o.frac = 0; o.dir = 1; }
     return o;
   }
 
-  function station(id, here, nextIn) {
-    var eta = $(id + "Eta"), note = $(id + "Note");
-    if (here) { eta.textContent = "here"; eta.className = "eta here"; note.textContent = "departs in " + fmt(here.departs) + " · next in " + fmt(nextIn); }
-    else { eta.textContent = fmt(nextIn); eta.className = "eta soon"; note.textContent = "until the next trolley pulls in"; }
+  // ════════════════════════════════════════════════════════════════════════
+  //  RENDER — wires the model above to the redesigned DOM.
+  // ════════════════════════════════════════════════════════════════════════
+
+  // GotG sits LEFT (x=10%), Buena Vista RIGHT (x=90%); car.frac is 0 at GotG, 1 at BV.
+  function placeCar(id, c) {
+    var el = $(id);
+    el.style.left = (10 + c.frac * 80) + "%";
+    el.style.transform = "translate(-50%,-50%) scaleX(" + c.dir + ")";
+  }
+
+  // Each card shows the two next arrivals, nearer station first.
+  function setCard(prefix, c) {
+    var ggFirst = c.toGG <= c.toBV;
+    var prim = ggFirst ? { st: GOTG_LBL, ms: c.toGG } : { st: BV_LBL, ms: c.toBV };
+    var sec  = ggFirst ? { st: BV_LBL,   ms: c.toBV } : { st: GOTG_LBL, ms: c.toGG };
+    $(prefix + "PrimStation").textContent = prim.st;
+    $(prefix + "PrimTime").textContent = fmtMMSS(prim.ms);
+    $(prefix + "SecStation").textContent = sec.st;
+    $(prefix + "SecTime").textContent = fmtMMSS(sec.ms);
   }
 
   function calib() {
-    var el = $("calib");
-    if (!cal.calibrated) { el.className = "bad"; el.textContent = "⚠ not calibrated — rough estimate. Tap “the Good car just left GotG” when you see it."; return; }
+    var pill = $("hdStatus"), txt = $("hdStatusTxt"), banner = $("calBanner");
+    if (!cal.calibrated) {
+      pill.className = "rct-hd-status off"; txt.textContent = "awaiting calibration";
+      banner.className = "cal-banner bad";
+      banner.textContent = "rough estimate — not yet calibrated. Tap when the Good car leaves Mission: BREAKOUT! to lock it.";
+      return;
+    }
+    pill.className = "rct-hd-status on"; txt.textContent = "tracking";
     var since = Date.now() / 1000 - cal.latest;
     var sig = cal.sigma == null ? 0.05 : cal.sigma;   // manual override: assume the period is well-known
     var drift = since * sig / cal.C;                  // phase error expected to have accumulated
     var mins = Math.floor(since / 60);
-    if (drift > 5) { el.className = "bad"; el.textContent = "⚠ locked " + mins + " min ago — may have drifted ~" + Math.round(drift) + " s; re-tap when the Good car leaves GotG."; }
-    else { el.className = "ok"; el.textContent = "✓ locked " + mins + " min ago · drift so far < " + Math.max(1, Math.ceil(drift)) + " s"; }
+    if (drift > 5) { banner.className = "cal-banner bad"; banner.textContent = "locked " + mins + " min ago — may have drifted ~" + Math.round(drift) + " s; re-tap when the Good car leaves Mission: BREAKOUT!"; }
+    else { banner.className = "cal-banner ok"; banner.textContent = "locked " + mins + " min ago · drift so far < " + Math.max(1, Math.ceil(drift)) + " s"; }
   }
 
   function updateCalUI() {
     $("cOv").value = overrideC ? overrideC : "";
+    $("anchorVal").textContent = cal.latest > 0 ? fmtClock(cal.latest * 1000) : "not set";
+    $("footCycle").textContent = cal.C.toFixed(2) + " s";
     var s = $("calStats");
     if (overrideC) {
       s.innerHTML = "Manual period <b>" + overrideC.toFixed(2) + " s</b> · " +
@@ -237,7 +612,7 @@
     }
     if (!anchors.length) {
       s.innerHTML = "Using the seed period <b>" + SEED_C.toFixed(2) + " s</b> (±" + SEED_SIGMA.toFixed(2) +
-        "). Tap when the Good car leaves GotG to lock the phase and begin refining.";
+        "). Tap when the Good car leaves to lock the phase and begin refining.";
       return;
     }
     var nearestTick = Math.round(cal.C / 0.05) * 0.05;   // server logic is tick-based (0.05 s)
@@ -255,39 +630,86 @@
     var T = Date.now() / 1000, C = cal.C, HALF = C / 2;
     var off = swap ? HALF : 0; // the anchor fixes phase only mod half-cycle; this picks which car is A
     var A = car(mod(T - cal.epoch + off, C), C), B = car(mod(T - cal.epoch + off + HALF, C), C);
-    $("aState").textContent = A.state; $("aDetail").textContent = A.detail;
-    $("bState").textContent = B.state; $("bDetail").textContent = B.detail;
-    $("dotA").style.left = (A.frac * 100) + "%";
-    $("dotB").style.left = (B.frac * 100) + "%";
-    station("bv", A.atBV ? A : (B.atBV ? B : null), Math.min(A.toBV, B.toBV));
-    station("gg", A.atGG ? A : (B.atGG ? B : null), Math.min(A.toGG, B.toGG));
+    placeCar("carGood", A); placeCar("carBad", B);
+    setCard("g", A); setCard("b", B);
     calib();
   }
 
-  $("anchor").onclick = function () { anchors.push(Date.now() / 1000); recalc(); };
-  $("swap").onclick = function () {
-    swap = !swap;
-    localStorage.setItem("rct_swap", swap ? "1" : "0");
-    tick();
+  // ════════════════════════════════════════════════════════════════════════
+  //  THEME — light (Linen) / dark (Midnight), persisted in localStorage.
+  // ════════════════════════════════════════════════════════════════════════
+  var THEMES = {
+    linen: {
+      label: 'Linen', mode: 'light',
+      vars: {
+        '--bg': '#f3ead3', '--bg-2': '#ece1c2', '--fg': '#1a2a3a',
+        '--muted': 'rgba(26,42,58,.6)', '--faint': 'rgba(26,42,58,.2)', '--line': 'rgba(26,42,58,.32)',
+        '--card': 'rgba(255,250,235,.55)', '--card-bd': 'rgba(26,42,58,.15)',
+        '--accent': '#b13a2a', '--good': '#1f7a3a', '--bad': '#b13a2a',
+        '--ring-bg': 'rgba(26,42,58,.1)', '--shadow': '0 14px 30px -20px rgba(26,42,58,.4)',
+        '--font-disp': '"DM Serif Display", "Playfair Display", Georgia, serif',
+        '--font-body': '"Spectral", Georgia, serif',
+        '--font-mono': '"JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace',
+        '--rad': '2px',
+        '--texture': 'radial-gradient(2px 2px at 20% 30%, rgba(26,42,58,.06), transparent 60%), radial-gradient(2px 2px at 60% 70%, rgba(26,42,58,.05), transparent 60%), radial-gradient(2px 2px at 85% 20%, rgba(26,42,58,.05), transparent 60%)',
+        '--vignette': 'radial-gradient(120% 90% at 50% 110%, rgba(26,42,58,.1), transparent 60%)',
+      },
+    },
+    midnight: {
+      label: 'Midnight', mode: 'dark',
+      vars: {
+        '--bg': '#0c0e12', '--bg-2': '#15181f', '--fg': '#f1ebdc',
+        '--muted': 'rgba(241,235,220,.6)', '--faint': 'rgba(241,235,220,.18)', '--line': 'rgba(241,235,220,.18)',
+        '--card': 'rgba(255,255,255,.04)', '--card-bd': 'rgba(241,235,220,.1)',
+        '--accent': '#f6b94a', '--good': '#4cd380', '--bad': '#ff5d5d',
+        '--ring-bg': 'rgba(241,235,220,.08)', '--shadow': '0 22px 60px -30px rgba(0,0,0,.8)',
+        '--font-disp': '"Instrument Serif", "Cormorant Garamond", Georgia, serif',
+        '--font-body': '"Inter Tight", "Inter", system-ui, sans-serif',
+        '--font-mono': '"JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace',
+        '--rad': '16px',
+        '--texture': 'radial-gradient(1000px 700px at 20% 0%, rgba(246,185,74,.07), transparent 60%), radial-gradient(900px 600px at 100% 100%, rgba(76,211,128,.05), transparent 60%)',
+        '--vignette': 'radial-gradient(120% 90% at 50% 110%, rgba(0,0,0,.5), transparent 60%)',
+      },
+    },
   };
-  $("undo").onclick = function () { if (anchors.length) { anchors.pop(); recalc(); } };
+  var SUN_SVG = '<svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><circle cx="8" cy="8" r="3" fill="currentColor"/><g stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><line x1="8" y1="1.5" x2="8" y2="3"/><line x1="8" y1="13" x2="8" y2="14.5"/><line x1="1.5" y1="8" x2="3" y2="8"/><line x1="13" y1="8" x2="14.5" y2="8"/><line x1="3.2" y1="3.2" x2="4.2" y2="4.2"/><line x1="11.8" y1="11.8" x2="12.8" y2="12.8"/><line x1="3.2" y1="12.8" x2="4.2" y2="11.8"/><line x1="11.8" y1="4.2" x2="12.8" y2="3.2"/></g></svg>';
+  var MOON_SVG = '<svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M11 2.5a5.5 5.5 0 1 0 2.5 8.2A4.5 4.5 0 0 1 11 2.5z" fill="currentColor"/></svg>';
+
+  var theme = localStorage.getItem("rct_theme");
+  if (!THEMES[theme]) theme = "linen";
+  function applyTheme(name) {
+    theme = name;
+    localStorage.setItem("rct_theme", name);
+    var root = $("root"), vars = THEMES[name].vars;
+    for (var k in vars) root.style.setProperty(k, vars[k]);
+    root.dataset.theme = name;
+    var mode = THEMES[name].mode;
+    root.style.colorScheme = mode;
+    $("themeLabel").textContent = THEMES[name].label;
+    $("toggleTrack").className = "hd-toggle-track hd-toggle-" + mode;
+    $("toggleThumb").innerHTML = mode === 'dark' ? MOON_SVG : SUN_SVG;
+  }
+
+  // ---- events ----
+  $("anchor").onclick = function () { anchors.push(Date.now() / 1000); recalc(); tick(); };
+  $("swap").onclick = function () { swap = !swap; localStorage.setItem("rct_swap", swap ? "1" : "0"); tick(); };
+  $("undo").onclick = function () { if (anchors.length) { anchors.pop(); recalc(); tick(); } };
   $("reset").onclick = function () {
     anchors = [];
     localStorage.removeItem("rct_anchors");
     localStorage.removeItem("rct_anchored_at");
     localStorage.removeItem("rct_epoch0");
-    recalc();
+    recalc(); tick();
   };
-  $("cSave").onclick = function () {
-    var v = parseFloat($("cOv").value);
-    if (isFinite(v) && v > 0) { overrideC = v; localStorage.setItem("rct_period", v); recalc(); }
-  };
-  $("cClear").onclick = function () { overrideC = null; localStorage.removeItem("rct_period"); recalc(); };
-  $("anSet").onclick = function () {
-    var v = parseFloat($("anIn").value);
-    if (isFinite(v) && v > 1e9) { anchors.push(v); recalc(); $("anIn").value = ""; }
-  };
+  $("advToggle").onclick = function () { var a = $("calAdvanced"); a.hidden = !a.hidden; this.textContent = a.hidden ? "advanced" : "hide advanced"; };
+  $("cSave").onclick = function () { var v = parseFloat($("cOv").value); if (isFinite(v) && v > 0) { overrideC = v; localStorage.setItem("rct_period", v); recalc(); tick(); } };
+  $("cClear").onclick = function () { overrideC = null; localStorage.removeItem("rct_period"); recalc(); tick(); };
+  $("anSet").onclick = function () { var v = parseFloat($("anIn").value); if (isFinite(v) && v > 1e9) { anchors.push(v); recalc(); tick(); $("anIn").value = ""; } };
+  $("themeToggle").onclick = function () { applyTheme(theme === 'linen' ? 'midnight' : 'linen'); };
 
+  // ---- init ----
+  (function () { var t = ''; for (var i = 0; i < 41; i++) { var x = 80 + i * 21; t += '<rect x="' + x + '" y="34" width="3" height="12" fill="currentColor" opacity=".25"/>'; } $("ties").innerHTML = t; })();
+  applyTheme(theme);
   recalc();
   setInterval(tick, 250);
   tick();
