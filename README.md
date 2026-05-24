@@ -14,8 +14,8 @@ from one **anchor** (a "GotG departure" time) plus the **cycle period**.
 
 ## Using it (in the browser, per visitor)
 
-- Tap **▶ the Good car just left GotG** the instant a trolley pulls out of GotG; that
-  locks the phase. Repeat over time and the page refines the period itself.
+- It's accurate by default — no setup. If a car looks off, **re-sync**: tap the button the
+  instant a trolley pulls out of GotG. Repeat over time and the page refines the period itself.
 - Or paste mod data (see below): the **cycle** into the *advanced* period override, and
   the **anchor** Unix time into *Anchor from a timestamp*.
 - The trains are identical, so a departure can't say which one is "Good." If the labels
@@ -32,13 +32,14 @@ The defaults live near the top of `index.html`'s `<script>`:
 
 | Constant | Meaning | Current |
 |----------|---------|---------|
-| `SEED_C` | cycle period, seconds | `680.0` |
+| `SEED_C` | cycle period, seconds | `679.71` |
 | `SEED_SIGMA` | how much to trust `SEED_C` vs live taps (smaller = trust more) | `0.15` |
-| `EPOCH0_DEFAULT` | rough default phase shown before anyone anchors | `518.1` |
+| `DEFAULT_ANCHOR` | baked GotG-departure (Unix s) the page predicts from by default | `1779649933.0` |
 
-The **period** is what causes long-term drift, and it's stable across the day — so it's
-the thing worth baking. The **phase** has to be re-anchored to a live sighting because a
-server restart resets the cycle, so it's normally left to the in-browser anchor.
+The page predicts from `DEFAULT_ANCHOR` + `SEED_C` and is **accurate out of the box** — the
+in-browser calibration is an optional re-sync, not a required step. The **period** is stable
+across the day; the **anchor** is what goes stale after a server restart (which resets the
+cycle), so re-bake `DEFAULT_ANCHOR` when that happens.
 
 ### 1. Measure in-game (the mod)
 
@@ -53,14 +54,12 @@ server restart resets the cycle, so it's normally left to the in-browser anchor.
 
 ### 2. Edit `index.html`
 
-- Set the period: `var SEED_C = 680.0;` → your measured even-second value.
-- *(optional)* If you're confident, tighten `var SEED_SIGMA = 0.15;` (e.g. `0.05`) so
-  the baked period dominates over a few stray taps.
-- *(optional)* Refresh the rough default phase: set `EPOCH0_DEFAULT` to
-  **`anchor mod SEED_C`** (the anchor's Unix seconds modulo the period — a value in
-  `[0, SEED_C)`). This makes the page roughly right for a first-time visitor, but it
-  goes stale after a server restart, so it's only a fallback — real accuracy still comes
-  from a live anchor.
+- Set the anchor: `var DEFAULT_ANCHOR = 1779649933.0;` → a recent GotG-departure Unix time
+  from the mod (just paste it — no modulo needed). This is what the page predicts from by
+  default; refresh it after a server restart.
+- Set the period: `var SEED_C = 679.71;` → your measured value.
+- *(optional)* If you're confident, tighten `var SEED_SIGMA = 0.15;` (e.g. `0.05`) so the
+  baked period dominates over a few stray taps.
 
 ### 3. Commit & push
 

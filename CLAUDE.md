@@ -53,15 +53,17 @@ than `PRUNE_SEC` (48 h) are dropped, capped at `MAX_ANCHORS`.
 
 ## Recalibrating the baked defaults (maintainer)
 
-Defaults live at the top of the `<script>` block (around line 96). When the page is
-off-sync and you're given fresh in-game numbers:
+Defaults live at the top of the `<script>` block. The page predicts from these and is
+**accurate out of the box** — the in-browser calibration is an optional re-sync, not a
+required step. When the page is off-sync (most often after a server restart, which resets
+the cycle), bake fresh in-game numbers:
 
-- **`SEED_C`** (period, s) is the value worth baking — it's stable across the day and is
-  what causes long-term drift. Set it to the measured even-second cycle.
+- **`DEFAULT_ANCHOR`** (Unix s) is the GotG-departure the default phase comes straight from —
+  just paste a recent "Good car left GotG" time from the mod (`/imf rct calib`); no modulo.
+  This is the value that goes stale on a server restart.
+- **`SEED_C`** (period, s) is stable across the day and governs long-term drift. Set it to
+  the measured live-capture cycle.
 - **`SEED_SIGMA`** is how much to trust `SEED_C` vs live taps (smaller = trust more);
   tighten toward `0.05` only when confident.
-- **`EPOCH0_DEFAULT`** is only the rough pre-anchor phase. Optionally refresh it to
-  `anchor mod SEED_C`. Do **not** try to bake phase for accuracy: a server restart resets
-  the cycle, so real accuracy always comes from a live in-browser anchor, not the source.
 
 See `README.md` for the full maintainer measure → edit → push procedure.

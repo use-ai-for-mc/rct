@@ -196,14 +196,15 @@
     padding: 18px 20px; background: var(--card); border: 1px solid var(--card-bd); border-radius: var(--rad);
   }
   .cal-fire {
-    appearance: none; border: 0; grid-column: 1;
-    display: flex; align-items: center; gap: 14px; padding: 14px 18px;
-    background: var(--fg); color: var(--bg); border-radius: calc(var(--rad) - 2px);
+    appearance: none; grid-column: 1;
+    display: flex; align-items: center; gap: 12px; padding: 11px 15px;
+    background: transparent; color: var(--fg); border: 1px solid var(--card-bd);
+    border-radius: calc(var(--rad) - 2px);
     cursor: pointer; font: inherit; text-align: left;
-    transition: transform .1s ease, box-shadow .1s ease;
+    transition: border-color .12s ease, background .12s ease;
   }
-  .cal-fire:hover { transform: translateY(-1px); box-shadow: 0 8px 18px -10px rgba(0,0,0,.35); }
-  .cal-fire:active { transform: translateY(0); }
+  .cal-fire:hover { border-color: var(--accent); background: color-mix(in oklab, var(--accent) 6%, transparent); }
+  .cal-fire:active { background: color-mix(in oklab, var(--accent) 12%, transparent); }
   .cal-fire-dot {
     width: 12px; height: 12px; border-radius: 50%; background: var(--accent);
     box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 35%, transparent);
@@ -298,7 +299,7 @@
           <p class="rct-hd-sub">live arrival predictions · DCA Front Gate ⟷ Mission: BREAKOUT!</p>
         </div>
         <div class="rct-hd-meta">
-          <div class="rct-hd-status off" id="hdStatus"><span class="rct-hd-dot"></span><span id="hdStatusTxt">awaiting calibration</span></div>
+          <div class="rct-hd-status on" id="hdStatus"><span class="rct-hd-dot"></span><span id="hdStatusTxt">tracking</span></div>
           <button class="rct-hd-toggle" id="themeToggle" aria-label="Toggle light/dark theme" title="Toggle light/dark theme">
             <span class="hd-toggle-track hd-toggle-light" id="toggleTrack"><span class="hd-toggle-thumb" id="toggleThumb"></span></span>
             <span class="hd-toggle-lbl" id="themeLabel">Linen</span>
@@ -392,8 +393,8 @@
         <button class="cal-fire" id="anchor">
           <span class="cal-fire-dot"></span>
           <span class="cal-fire-lbl">
-            <span class="cal-fire-verb">tap when</span>
-            <span class="cal-fire-action">the <em>Good</em> car leaves Mission: BREAKOUT!</span>
+            <span class="cal-fire-verb">optional · re-sync</span>
+            <span class="cal-fire-action">tap as the <em>Good</em> car leaves Mission: BREAKOUT!</span>
           </span>
         </button>
         <div class="cal-meta">
@@ -405,7 +406,7 @@
             <button class="cal-link" id="advToggle">advanced</button>
           </div>
         </div>
-        <div class="cal-banner bad" id="calBanner">rough estimate — not yet calibrated.</div>
+        <div class="cal-banner ok" id="calBanner">✓ on the predicted schedule.</div>
         <p class="cal-stats" id="calStats"></p>
         <div class="cal-advanced" id="calAdvanced" hidden>
           <div class="cal-adv-row">
@@ -425,10 +426,10 @@
       </section>
 
       <footer class="rct-foot">
-        <p>Tap the button the instant the Good car pulls out of Mission: BREAKOUT! — the first tap locks the phase to
-          real life, and <b>every tap after that also sharpens the cycle period</b> (an hour of taps → ±0.1&nbsp;s,
-          a day → ±0.02&nbsp;s). A single hardcoded period can't stay accurate: it's known only to ±0.2&nbsp;s and a
-          server restart resets the cycle, so real accuracy always comes from live taps.</p>
+        <p>This page predicts from a <b>baked schedule</b> and is accurate out of the box — no setup needed. If a car
+          ever looks off (most likely after a server restart, which resets the cycle), you can <b>re-sync</b>: tap the
+          button as the Good car leaves Mission: BREAKOUT!. Each tap also sharpens the period (an hour of taps →
+          ±0.1&nbsp;s, a day → ±0.02&nbsp;s), but it's entirely optional.</p>
         <p>The two cars run half a cycle apart and are identical, so which one is “Good” can't be derived from timing —
           if the labels land on the wrong cars, hit <b>swap A/B</b> once.</p>
         <p class="rct-foot-meta">cycle <b id="footCycle">680.00 s</b> · two cars run half a cycle apart · track is schematic, countdowns are exact</p>
@@ -445,7 +446,7 @@
   var SEED_SIGMA = 0.15;      // prior uncertainty; live taps sharpen this
   var TAP_SIGMA = 1.0;        // a human button-tap pins a phase-0 crossing to ~±1 s
   var BV_ARRIVE = 306, BV_DEPART = 316.3, GOTG_ARRIVE = 622.3; // phase landmarks; GotG dwell flexes with C
-  var EPOCH0_DEFAULT = 584.92; // = 1779649933.0 mod 679.71 (anchor baked 2026-05-25); rough phase before any live anchor
+  var DEFAULT_ANCHOR = 1779649933.0; // baked GotG-departure (Unix s) — the page predicts from this out of the box, no calibration needed. To recalibrate, replace this (and SEED_C).
   var PRUNE_SEC = 48 * 3600;  // forget taps older than this (server restarts reset the cycle)
   var MAX_ANCHORS = 24;
 
@@ -477,7 +478,7 @@
   var anchors = loadAnchors();      // sorted Unix-second timestamps of "Good car left GotG"
   var overrideC = loadOverride();   // manual period, or null
   var swap = localStorage.getItem("rct_swap") === "1"; // which car is A — unobservable from anchors
-  var cal = { C: SEED_C, epoch: EPOCH0_DEFAULT, sigma: SEED_SIGMA, n: 0, calibrated: false, latest: 0, baseline: 0 };
+  var cal = { C: SEED_C, epoch: DEFAULT_ANCHOR, sigma: SEED_SIGMA, n: 0, calibrated: false, latest: 0, baseline: 0 };
 
   function loadAnchors() {
     var raw = localStorage.getItem("rct_anchors"), a = [];
@@ -507,7 +508,7 @@
     saveAnchors();
     var n = anchors.length;
     if (!n) {
-      cal = { C: overrideC || SEED_C, epoch: EPOCH0_DEFAULT, sigma: overrideC ? null : SEED_SIGMA,
+      cal = { C: overrideC || SEED_C, epoch: DEFAULT_ANCHOR, sigma: overrideC ? null : SEED_SIGMA,
               n: 0, calibrated: false, latest: 0, baseline: 0, manual: !!overrideC };
       return updateCalUI();
     }
@@ -596,13 +597,13 @@
 
   function calib() {
     var pill = $("hdStatus"), txt = $("hdStatusTxt"), banner = $("calBanner");
+    pill.className = "rct-hd-status on"; txt.textContent = "tracking";
     if (!cal.calibrated) {
-      pill.className = "rct-hd-status off"; txt.textContent = "awaiting calibration";
-      banner.className = "cal-banner bad";
-      banner.textContent = "rough estimate — not yet calibrated. Tap when the Good car leaves Mission: BREAKOUT! to lock it.";
+      // Running on the baked schedule (DEFAULT_ANCHOR) — accurate out of the box, no tap required.
+      banner.className = "cal-banner ok";
+      banner.textContent = "✓ on the predicted schedule — accurate out of the box. Re-sync below only if a car looks off.";
       return;
     }
-    pill.className = "rct-hd-status on"; txt.textContent = "tracking";
     var since = Date.now() / 1000 - cal.latest;
     var sig = cal.sigma == null ? 0.05 : cal.sigma;   // manual override: assume the period is well-known
     var drift = since * sig / cal.C;                  // phase error expected to have accumulated
@@ -613,7 +614,7 @@
 
   function updateCalUI() {
     $("cOv").value = overrideC ? overrideC : "";
-    $("anchorVal").textContent = cal.latest > 0 ? fmtClock(cal.latest * 1000) : "not set";
+    $("anchorVal").textContent = cal.latest > 0 ? fmtClock(cal.latest * 1000) : "baked schedule";
     $("footCycle").textContent = cal.C.toFixed(2) + " s";
     var s = $("calStats");
     if (overrideC) {
@@ -623,8 +624,8 @@
       return;
     }
     if (!anchors.length) {
-      s.innerHTML = "Using the seed period <b>" + SEED_C.toFixed(2) + " s</b> (±" + SEED_SIGMA.toFixed(2) +
-        "). Tap when the Good car leaves to lock the phase and begin refining.";
+      s.innerHTML = "Predicting from the baked schedule · period <b>" + SEED_C.toFixed(2) +
+        " s</b>. Optional: tap a live sighting to fine-tune the period.";
       return;
     }
     var nearestTick = Math.round(cal.C / 0.05) * 0.05;   // server logic is tick-based (0.05 s)
