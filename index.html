@@ -389,11 +389,11 @@ if (typeof module !== 'undefined') module.exports = RCT_ROUTE;
   //  MODEL + CALIBRATION ENGINE — unchanged from production (the redesign's
   //  simpler one-anchor model is intentionally NOT used; this is our algorithm).
   // ════════════════════════════════════════════════════════════════════════
-  var SEED_C = 679.71;        // measured cycle period (live-capture refit, 2026-05-25)
+  var SEED_C = 679.75;        // measured cycle period (live-capture refit, 2026-05-25)
   var SEED_SIGMA = 0.15;      // prior uncertainty; live taps sharpen this
   var TAP_SIGMA = 1.0;        // a human button-tap pins a phase-0 crossing to ~±1 s
   var BV_ARRIVE = 306, BV_DEPART = 316.3, GOTG_ARRIVE = 622.3; // phase landmarks; GotG dwell flexes with C
-  var DEFAULT_ANCHOR = 1779649933.0; // baked GotG-departure (Unix s) — the page predicts from this out of the box, no calibration needed. To recalibrate, replace this (and SEED_C).
+  var DEFAULT_ANCHOR = 1779653332.1; // baked GotG-departure (Unix s) — the page predicts from this out of the box, no calibration needed. To recalibrate, replace this (and SEED_C).
   var PRUNE_SEC = 48 * 3600;  // forget taps older than this (server restarts reset the cycle)
   var MAX_ANCHORS = 24;
 

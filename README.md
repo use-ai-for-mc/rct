@@ -32,9 +32,9 @@ The defaults live near the top of `index.html`'s `<script>`:
 
 | Constant | Meaning | Current |
 |----------|---------|---------|
-| `SEED_C` | cycle period, seconds | `679.71` |
+| `SEED_C` | cycle period, seconds | `679.75` |
 | `SEED_SIGMA` | how much to trust `SEED_C` vs live taps (smaller = trust more) | `0.15` |
-| `DEFAULT_ANCHOR` | baked GotG-departure (Unix s) the page predicts from by default | `1779649933.0` |
+| `DEFAULT_ANCHOR` | baked GotG-departure (Unix s) the page predicts from by default | `1779653332.1` |
 
 The page predicts from `DEFAULT_ANCHOR` + `SEED_C` and is **accurate out of the box** — the
 in-browser calibration is an optional re-sync, not a required step. The **period** is stable
@@ -54,10 +54,10 @@ cycle), so re-bake `DEFAULT_ANCHOR` when that happens.
 
 ### 2. Edit `index.html`
 
-- Set the anchor: `var DEFAULT_ANCHOR = 1779649933.0;` → a recent GotG-departure Unix time
+- Set the anchor: `var DEFAULT_ANCHOR = 1779653332.1;` → a recent GotG-departure Unix time
   from the mod (just paste it — no modulo needed). This is what the page predicts from by
   default; refresh it after a server restart.
-- Set the period: `var SEED_C = 679.71;` → your measured value.
+- Set the period: `var SEED_C = 679.75;` → your measured value.
 - *(optional)* If you're confident, tighten `var SEED_SIGMA = 0.15;` (e.g. `0.05`) so the
   baked period dominates over a few stray taps.
 
