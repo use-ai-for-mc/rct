@@ -28,7 +28,14 @@ The trolleys run a deterministic, wall-clock-locked cycle of period `C` (≈680 
 the phase into segments (`→ Buena Vista`, `at BV`, `→ GotG`, `at GotG`):
 `BV_ARRIVE`, `BV_DEPART`, `GOTG_ARRIVE`. `car(phase, C)` maps a phase to a car's
 state/detail/track-fraction; `tick()` (every 250 ms) is a pure function of `Date.now()`
-and the calibration `cal`, redrawing both car dots, both station ETAs, and the banner.
+and the calibration `cal`, redrawing the car dots (1-D bar + 2-D map), the car-card
+countdowns, and the status banner.
+
+The dot's **within-leg position is real, not linear**: `car()` reads `RCT_ROUTE.sFwd/sRev`
+(arc-length per ride-second, baked from the mod's route capture) so the dot decelerates and
+**pauses at the mid-route stops** (flat stretches of the profile). `RCT_ROUTE` is inlined in
+`index.html` — a deliberate mirror of `rct-route-data.js` (keep both in sync; don't de-dupe).
+The 2-D "ROUTE · TOP-DOWN" map walks `RCT_ROUTE.polyline`, placing each car by arc-length.
 
 **The half-cycle / swap ambiguity is the key subtlety.** An anchor (a "Good car left
 GotG" sighting) pins the phase only *mod C/2*, because the two trains are identical — so
