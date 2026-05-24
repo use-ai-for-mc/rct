@@ -28,8 +28,9 @@ The trolleys run a deterministic, wall-clock-locked cycle of period `C` (≈680 
 the phase into segments (`→ Buena Vista`, `at BV`, `→ GotG`, `at GotG`):
 `BV_ARRIVE`, `BV_DEPART`, `GOTG_ARRIVE`. `car(phase, C)` maps a phase to a car's
 state/detail/track-fraction; `tick()` (every 250 ms) is a pure function of `Date.now()`
-and the calibration `cal`, redrawing the car dots (1-D bar + 2-D map), the car-card
-countdowns, and the status banner.
+and the calibration `cal`, redrawing the car positions on the 2-D route map, the per-car
+cards (each showing the next arrival — or a departure countdown while the car is parked at a
+station), and the status banner.
 
 The dot's **within-leg position is real, not linear**: `car()` reads `RCT_ROUTE.sFwd/sRev`
 (arc-length per ride-second, baked from the mod's route capture) so the dot decelerates and

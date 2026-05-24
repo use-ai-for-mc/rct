@@ -106,67 +106,18 @@
   .hd-toggle-dark  .hd-toggle-thumb { left: 28px; }
   .hd-toggle-lbl { font-variant-numeric: tabular-nums; width: 4.5em; text-align: left; }
 
-  /* ── Schematic track ────────────────────────────────────────────────────── */
-  .track {
-    position: relative; padding: 56px 8px 24px;
-    background: var(--card); border: 1px solid var(--card-bd);
-    border-radius: var(--rad); box-shadow: var(--shadow); overflow: hidden;
-  }
-  .track::before {
-    content: 'TRACK · SCHEMATIC';
-    position: absolute; top: 14px; left: 18px;
-    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.18em; color: var(--muted);
-  }
-  .track::after {
-    content: '↔ ~5 min';
-    position: absolute; top: 14px; right: 18px;
-    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; color: var(--muted);
-  }
-  .track-frame { position: relative; height: 130px; margin: 0 6%; }
-  .rail {
-    position: absolute; left: 0; right: 0; top: 50%; height: 4px; transform: translateY(-50%);
-    background: linear-gradient(to right, transparent 0%, var(--fg) 6%, var(--fg) 94%, transparent 100%);
-    opacity: .55; border-radius: 2px;
-  }
-  .ties { position: absolute; left: 0; right: 0; top: 50%; width: 100%; height: 40px; transform: translateY(-50%); color: var(--fg); }
-  .stops { position: absolute; inset: 0; pointer-events: none; }
-  .stop-tick { position: absolute; top: 50%; width: 2px; height: 18px; transform: translate(-50%, -50%); background: var(--fg); opacity: .3; border-radius: 1px; }
-  .station {
-    position: absolute; top: 50%; width: 0;
-    display: flex; flex-direction: column; align-items: center;
-    text-align: center; white-space: nowrap;
-  }
-  .station-left  { left: 10%; transform: translate(-50%, -50%); }
-  .station-right { left: 90%; transform: translate(-50%, -50%); }
-  .station-marker {
-    width: 26px; height: 26px; border-radius: 50%;
-    background: var(--bg); border: 3px solid var(--fg);
-    box-shadow: 0 0 0 5px var(--bg); position: relative;
-  }
-  .station-marker::after { content: ''; position: absolute; inset: 4px; border-radius: 50%; background: var(--accent); }
-  .station-label { position: absolute; top: -40px; font-family: var(--font-disp); font-size: 18px; font-weight: 500; }
-  .station-sub {
-    position: absolute; top: 36px; font-family: var(--font-mono); font-size: 10px;
-    letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase;
-  }
-  .car {
-    position: absolute; top: 50%; width: 72px; height: 36px;
-    transform: translate(-50%, -50%); transition: left .15s linear;
-    filter: drop-shadow(0 4px 6px rgba(0,0,0,.18)); pointer-events: none;
-  }
-  .car-svg { display: block; overflow: visible; }
-
   /* ── Route map (top-down, real geography from RCT_ROUTE.polyline) ───────── */
   .routemap {
     position: relative; padding: 40px 16px 16px;
     background: var(--card); border: 1px solid var(--card-bd);
     border-radius: var(--rad); box-shadow: var(--shadow); overflow: hidden;
+    display: flex; flex-direction: column;
   }
   .routemap::before {
     content: 'ROUTE · TOP-DOWN'; position: absolute; top: 14px; left: 18px;
     font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.18em; color: var(--muted);
   }
-  .rm-svg { display: block; width: 100%; max-width: 620px; margin: 0 auto; height: 340px; }
+  .rm-svg { display: block; width: 100%; flex: 1; min-height: 320px; }
   .rm-rail { stroke: var(--fg); stroke-width: 5; opacity: .5; stroke-linecap: round; stroke-linejoin: round; }
   .rm-stop { fill: var(--muted); opacity: .9; }
   .rm-station { fill: var(--bg); stroke: var(--fg); stroke-width: 3; }
@@ -178,7 +129,9 @@
   .rct-root[data-theme="midnight"] .rm-car { filter: drop-shadow(0 0 5px color-mix(in oklab, var(--accent) 45%, transparent)); }
 
   /* ── Car cards ──────────────────────────────────────────────────────────── */
-  .stations { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .main-grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 20px; align-items: stretch; }
+  .stations { display: flex; flex-direction: column; gap: 20px; }
+  .stations .car-card { flex: 1; justify-content: center; }
   .car-card {
     position: relative; padding: 22px 24px 20px;
     background: var(--card); border: 1px solid var(--card-bd);
@@ -210,6 +163,9 @@
   .arr-row-time { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 22px; font-weight: 600; letter-spacing: 0.01em; line-height: 1; }
   .arr-row-primary .arr-row-time { font-size: 38px; font-weight: 700; }
   .arr-row-primary .arr-row-at { font-size: 20px; }
+  .arr-row.boarding .arr-row-lbl { color: var(--accent); }
+  .arr-row.boarding .arr-row-lbl::before { content: '● '; animation: rct-blink 1.1s ease-in-out infinite; }
+  @keyframes rct-blink { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
 
   /* ── Calibration ────────────────────────────────────────────────────────── */
   .calibrate {
@@ -281,28 +237,18 @@
 
   /* ── Theme-specific polish ──────────────────────────────────────────────── */
   /* Linen: vintage timetable — heavier rules and bolder countdowns. */
-  .rct-root[data-theme="linen"] .car-card,
-  .rct-root[data-theme="linen"] .track { border-width: 2px; }
+  .rct-root[data-theme="linen"] .car-card { border-width: 2px; }
   .rct-root[data-theme="linen"] .arr-row-time { font-weight: 800; }
-  /* Midnight: glow on the cars and station rings. */
-  .rct-root[data-theme="midnight"] .car {
-    filter: drop-shadow(0 0 14px color-mix(in oklab, var(--accent) 30%, transparent))
-            drop-shadow(0 4px 8px rgba(0,0,0,.5));
-  }
-  .rct-root[data-theme="midnight"] .station-marker {
-    box-shadow: 0 0 0 5px var(--bg), 0 0 24px color-mix(in oklab, var(--accent) 50%, transparent);
-  }
 
   /* ── Responsive ─────────────────────────────────────────────────────────── */
   @media (max-width: 720px) {
     .rct-stage { padding: 28px 18px 48px; gap: 24px; }
     .rct-hd { grid-template-columns: 1fr; gap: 12px; }
     .rct-hd-meta { align-items: flex-start; flex-direction: row; gap: 12px; flex-wrap: wrap; }
-    .stations { grid-template-columns: 1fr; }
+    .main-grid { grid-template-columns: 1fr; }
     .calibrate { grid-template-columns: 1fr; }
     .cal-fire, .cal-meta { grid-column: 1; }
     .cal-meta { align-items: flex-start; }
-    .track-frame { margin: 0 4%; height: 110px; }
     .arr-row-primary .arr-row-time { font-size: 32px; }
   }
 </style>
@@ -328,93 +274,41 @@
         </div>
       </header>
 
-      <section class="track">
-        <div class="track-frame">
-          <svg class="ties" id="ties" viewBox="0 0 1000 80" preserveAspectRatio="none"></svg>
-          <div class="rail"></div>
-          <div class="stops" id="stops"></div>
-          <div class="station station-left">
-            <div class="station-marker"></div>
-            <div class="station-label">Mission: BREAKOUT!</div>
-            <div class="station-sub">Guardians of the Galaxy</div>
-          </div>
-          <div class="station station-right">
-            <div class="station-marker"></div>
-            <div class="station-label">Front Gate</div>
-            <div class="station-sub">DCA Front Gate</div>
-          </div>
-          <div class="car" id="carGood">
-            <svg viewBox="0 0 72 36" width="72" height="36" class="car-svg">
-              <rect x="4" y="6" width="64" height="22" rx="3" fill="var(--good)" />
-              <rect x="8" y="3" width="56" height="4" rx="1.5" fill="var(--good)" opacity=".85" />
-              <g fill="var(--bg)" opacity=".85">
-                <rect x="9" y="10" width="9" height="9" rx="1" /><rect x="21" y="10" width="9" height="9" rx="1" />
-                <rect x="33" y="10" width="9" height="9" rx="1" /><rect x="45" y="10" width="9" height="9" rx="1" />
-                <rect x="57" y="10" width="6" height="9" rx="1" />
-              </g>
-              <rect x="4" y="22" width="64" height="2" fill="var(--bg)" opacity=".35" />
-              <circle cx="14" cy="30" r="3.5" fill="var(--fg)" opacity=".7" /><circle cx="58" cy="30" r="3.5" fill="var(--fg)" opacity=".7" />
-              <text x="36" y="17.5" text-anchor="middle" font-family="var(--font-mono)" font-size="8" font-weight="700" fill="var(--bg)" opacity=".75">G</text>
-            </svg>
-          </div>
-          <div class="car" id="carBad">
-            <svg viewBox="0 0 72 36" width="72" height="36" class="car-svg">
-              <rect x="4" y="6" width="64" height="22" rx="3" fill="var(--bad)" />
-              <rect x="8" y="3" width="56" height="4" rx="1.5" fill="var(--bad)" opacity=".85" />
-              <g fill="var(--bg)" opacity=".85">
-                <rect x="9" y="10" width="9" height="9" rx="1" /><rect x="21" y="10" width="9" height="9" rx="1" />
-                <rect x="33" y="10" width="9" height="9" rx="1" /><rect x="45" y="10" width="9" height="9" rx="1" />
-                <rect x="57" y="10" width="6" height="9" rx="1" />
-              </g>
-              <rect x="4" y="22" width="64" height="2" fill="var(--bg)" opacity=".35" />
-              <circle cx="14" cy="30" r="3.5" fill="var(--fg)" opacity=".7" /><circle cx="58" cy="30" r="3.5" fill="var(--fg)" opacity=".7" />
-              <text x="36" y="17.5" text-anchor="middle" font-family="var(--font-mono)" font-size="8" font-weight="700" fill="var(--bg)" opacity=".75">B</text>
-            </svg>
-          </div>
-        </div>
-      </section>
+      <div class="main-grid">
+        <section class="routemap">
+          <svg id="rmSvg" class="rm-svg" preserveAspectRatio="xMidYMid meet" aria-label="Top-down route map">
+            <path id="rmRail" class="rm-rail" fill="none" />
+            <g id="rmStops"></g>
+            <g id="rmStations"></g>
+            <circle id="rmCarGood" class="rm-car rm-car-good" r="7" />
+            <circle id="rmCarBad" class="rm-car rm-car-bad" r="7" />
+          </svg>
+        </section>
 
-      <section class="routemap">
-        <svg id="rmSvg" class="rm-svg" preserveAspectRatio="xMidYMid meet" aria-label="Top-down route map">
-          <path id="rmRail" class="rm-rail" fill="none" />
-          <g id="rmStops"></g>
-          <g id="rmStations"></g>
-          <circle id="rmCarGood" class="rm-car rm-car-good" r="7" />
-          <circle id="rmCarBad" class="rm-car rm-car-bad" r="7" />
-        </svg>
-      </section>
-
-      <div class="stations">
-        <div class="car-card car-card-good">
-          <header class="car-card-hd">
-            <div class="car-card-tag" style="color:var(--good)"><span class="car-card-dot" style="background:var(--good)"></span>GOOD CAR</div>
-            <div class="car-card-name">The green trolley</div>
-          </header>
-          <div class="car-card-rows">
-            <div class="arr-row arr-row-primary">
-              <div class="arr-row-l"><div class="arr-row-lbl">Arriving at</div><div class="arr-row-at" id="gPrimStation">—</div></div>
-              <div class="arr-row-time" id="gPrimTime" style="color:var(--good)">––:––</div>
-            </div>
-            <div class="arr-row">
-              <div class="arr-row-l"><div class="arr-row-lbl">Then at</div><div class="arr-row-at" id="gSecStation">—</div></div>
-              <div class="arr-row-time" id="gSecTime">––:––</div>
+        <div class="stations">
+          <div class="car-card car-card-good">
+            <header class="car-card-hd">
+              <div class="car-card-tag" style="color:var(--good)"><span class="car-card-dot" style="background:var(--good)"></span>GOOD CAR</div>
+              <div class="car-card-name">The green trolley</div>
+            </header>
+            <div class="car-card-rows">
+              <div class="arr-row arr-row-primary" id="gPrimRow">
+                <div class="arr-row-l"><div class="arr-row-lbl" id="gPrimLbl">Arriving at</div><div class="arr-row-at" id="gPrimStation">—</div></div>
+                <div class="arr-row-time" id="gPrimTime" style="color:var(--good)">––:––</div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="car-card car-card-bad">
-          <header class="car-card-hd">
-            <div class="car-card-tag" style="color:var(--bad)"><span class="car-card-dot" style="background:var(--bad)"></span>BAD CAR</div>
-            <div class="car-card-name">The red trolley</div>
-          </header>
-          <div class="car-card-rows">
-            <div class="arr-row arr-row-primary">
-              <div class="arr-row-l"><div class="arr-row-lbl">Arriving at</div><div class="arr-row-at" id="bPrimStation">—</div></div>
-              <div class="arr-row-time" id="bPrimTime" style="color:var(--bad)">––:––</div>
-            </div>
-            <div class="arr-row">
-              <div class="arr-row-l"><div class="arr-row-lbl">Then at</div><div class="arr-row-at" id="bSecStation">—</div></div>
-              <div class="arr-row-time" id="bSecTime">––:––</div>
+          <div class="car-card car-card-bad">
+            <header class="car-card-hd">
+              <div class="car-card-tag" style="color:var(--bad)"><span class="car-card-dot" style="background:var(--bad)"></span>BAD CAR</div>
+              <div class="car-card-name">The red trolley</div>
+            </header>
+            <div class="car-card-rows">
+              <div class="arr-row arr-row-primary" id="bPrimRow">
+                <div class="arr-row-l"><div class="arr-row-lbl" id="bPrimLbl">Arriving at</div><div class="arr-row-at" id="bPrimStation">—</div></div>
+                <div class="arr-row-time" id="bPrimTime" style="color:var(--bad)">––:––</div>
+              </div>
             </div>
           </div>
         </div>
@@ -623,22 +517,19 @@ if (typeof module !== 'undefined') module.exports = RCT_ROUTE;
   //  RENDER — wires the model above to the redesigned DOM.
   // ════════════════════════════════════════════════════════════════════════
 
-  // GotG sits LEFT (x=10%), Buena Vista RIGHT (x=90%); car.frac is 0 at GotG, 1 at BV.
-  function placeCar(id, c) {
-    var el = $(id);
-    el.style.left = (10 + c.frac * 80) + "%";
-    el.style.transform = "translate(-50%,-50%) scaleX(" + c.dir + ")";
-  }
-
-  // Each card shows the two next arrivals, nearer station first.
+  // One line per car: the next arrival, or — when parked at a station — the departure countdown.
   function setCard(prefix, c) {
-    var ggFirst = c.toGG <= c.toBV;
-    var prim = ggFirst ? { st: GOTG_LBL, ms: c.toGG } : { st: BV_LBL, ms: c.toBV };
-    var sec  = ggFirst ? { st: BV_LBL,   ms: c.toBV } : { st: GOTG_LBL, ms: c.toGG };
-    $(prefix + "PrimStation").textContent = prim.st;
-    $(prefix + "PrimTime").textContent = fmtMMSS(prim.ms);
-    $(prefix + "SecStation").textContent = sec.st;
-    $(prefix + "SecTime").textContent = fmtMMSS(sec.ms);
+    var lbl, st, ms, boarding = c.atGG || c.atBV;
+    if (boarding) {                                 // parked — "Departing <station> in mm:ss"
+      lbl = "Departing"; st = c.atGG ? GOTG_LBL : BV_LBL; ms = c.departs;
+    } else {                                        // en route — next arrival
+      var ggFirst = c.toGG <= c.toBV;
+      lbl = "Arriving at"; st = ggFirst ? GOTG_LBL : BV_LBL; ms = ggFirst ? c.toGG : c.toBV;
+    }
+    $(prefix + "PrimLbl").textContent = lbl;
+    $(prefix + "PrimStation").textContent = st;
+    $(prefix + "PrimTime").textContent = fmtMMSS(ms);
+    $(prefix + "PrimRow").classList.toggle("boarding", boarding);
   }
 
   function calib() {
@@ -689,7 +580,6 @@ if (typeof module !== 'undefined') module.exports = RCT_ROUTE;
     var T = Date.now() / 1000, C = cal.C, HALF = C / 2;
     var off = swap ? HALF : 0; // the anchor fixes phase only mod half-cycle; this picks which car is A
     var A = car(mod(T - cal.epoch + off, C), C), B = car(mod(T - cal.epoch + off + HALF, C), C);
-    placeCar("carGood", A); placeCar("carBad", B);
     placeMapCar("rmCarGood", A.frac); placeMapCar("rmCarBad", B.frac);
     setCard("g", A); setCard("b", B);
     calib();
@@ -820,8 +710,6 @@ if (typeof module !== 'undefined') module.exports = RCT_ROUTE;
   }
 
   // ---- init ----
-  (function () { var t = ''; for (var i = 0; i < 41; i++) { var x = 80 + i * 21; t += '<rect x="' + x + '" y="34" width="3" height="12" fill="currentColor" opacity=".25"/>'; } $("ties").innerHTML = t; })();
-  (function () { var h = ''; for (var i = 0; i < STOPS.length; i++) { h += '<span class="stop-tick" style="left:' + (10 + STOPS[i] * 80) + '%"></span>'; } $("stops").innerHTML = h; })();
   initMap();
   applyTheme(theme);
   recalc();
