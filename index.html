@@ -438,11 +438,11 @@
   //  MODEL + CALIBRATION ENGINE — unchanged from production (the redesign's
   //  simpler one-anchor model is intentionally NOT used; this is our algorithm).
   // ════════════════════════════════════════════════════════════════════════
-  var SEED_C = 680.0;         // even-second period: direct capture ~679.77 + observed drift ⇒ 680
+  var SEED_C = 679.71;        // measured cycle period (live-capture refit, 2026-05-25)
   var SEED_SIGMA = 0.15;      // prior uncertainty; live taps sharpen this
   var TAP_SIGMA = 1.0;        // a human button-tap pins a phase-0 crossing to ~±1 s
   var BV_ARRIVE = 306, BV_DEPART = 316.3, GOTG_ARRIVE = 622.3; // phase landmarks; GotG dwell flexes with C
-  var EPOCH0_DEFAULT = 173.5; // = 1779648573.5 mod 680 (anchor baked 2026-05-25); rough phase before any live anchor
+  var EPOCH0_DEFAULT = 584.92; // = 1779649933.0 mod 679.71 (anchor baked 2026-05-25); rough phase before any live anchor
   var PRUNE_SEC = 48 * 3600;  // forget taps older than this (server restarts reset the cycle)
   var MAX_ANCHORS = 24;
 
