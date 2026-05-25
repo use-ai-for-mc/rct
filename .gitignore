@@ -1,0 +1,5 @@
+# Claude Code session data — never commit to this public repo
+.claude/
+
+# macOS
+.DS_Store
